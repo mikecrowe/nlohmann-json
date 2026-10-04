@@ -20,7 +20,7 @@ add_test(
       "-DTEST_WORK_DIR=${CMAKE_BINARY_DIR}/test_artifacts"
       "-DCLANG_TIDY_PROGRAM=${CLANG_TIDY_PROGRAM}"
       "-DCXX_COMPILER=${CMAKE_CXX_COMPILER}"
-      "-DINCLUDE_PATH=${CMAKE_SOURCE_DIR}/include"
+      "-DINCLUDE_PATH=${CMAKE_SOURCE_DIR}/single_include"
       "-DPLUGIN_PATH=$<TARGET_FILE:NlohmannJsonClangTidyPlugin>"
         -P "${CMAKE_CURRENT_LIST_DIR}/clang_tidy_compile_test.cmake"
 )

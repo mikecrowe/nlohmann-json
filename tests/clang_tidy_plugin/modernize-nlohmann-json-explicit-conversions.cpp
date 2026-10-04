@@ -340,3 +340,23 @@ bool call_other_member_iterator(json::iterator i)
 {
     return i->is_array();
 }
+
+// Clang-tidy tries to fix these even though it can't fix both at once!
+template <typename T>
+T templated(json &j)
+{
+    T t = j;
+    // CHECK-MESSAGES: [[@LINE-1]]:11: warning: implicit nlohmann::json conversion to double should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-MESSAGES: [[@LINE-2]]:11: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // No fixes because these two are overlapping
+}
+
+double templated_double_test(json &j)
+{
+    return templated<double>(j);
+}
+
+int templated_int_test(json &j)
+{
+    return templated<int>(j);
+}
