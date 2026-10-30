@@ -5,6 +5,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_NLOHMANNJSONEXPLICITCONVERSIONSCHECK_H
 
 #include "clang-tidy/ClangTidyCheck.h"
+#include "llvm/ADT/DenseSet.h"
 
 namespace clang::tidy::modernize {
 
@@ -24,6 +25,9 @@ public:
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
+
+private:
+    llvm::DenseSet<SourceLocation> AlreadyFixed;
 };
 
 } // namespace clang::tidy::modernize

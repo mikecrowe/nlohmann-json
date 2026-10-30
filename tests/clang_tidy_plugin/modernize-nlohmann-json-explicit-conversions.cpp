@@ -341,23 +341,55 @@ bool call_other_member_iterator(json::iterator i)
     return i->is_array();
 }
 
-// Clang-tidy tries to fix these even though it can't fix both at once!
+// Conversions in templates that don't depend on the template parameters are
+// fixed, but only diagnosed once.
 template <typename T>
-T templated(json &j)
+int templated_not_dependent(json &j)
+{
+    int i = j;
+    // CHECK-MESSAGES: [[@LINE-1]]:13: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: int i = j.get<int>();
+    return i;
+}
+
+int templated_not_dependent_test(json &j)
+{
+    return templated_not_dependent<double>(j) + templated_not_dependent<int>(j);
+}
+
+// Conversions in templates that depend on the template parameters are
+// diagnosed for each instantiation but not fixed since a fix for one
+// instantiation would break the others. This code can't be compiled once
+// implicit conversions are disabled.
+#if !defined(JSON_USE_IMPLICIT_CONVERSIONS) || JSON_USE_IMPLICIT_CONVERSIONS != 0
+template <typename T>
+T templated_once(json &j)
 {
     T t = j;
-    // CHECK-MESSAGES: [[@LINE-1]]:11: warning: implicit nlohmann::json conversion to double should be explicit [modernize-nlohmann-json-explicit-conversions]
-    // CHECK-MESSAGES: [[@LINE-2]]:11: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
-    // No fixes because these two are overlapping
+    // CHECK-MESSAGES: [[@LINE-1]]:11: warning: implicit nlohmann::json conversion to templated type should be explicit [modernize-nlohmann-json-explicit-conversions]
+    return t;
+}
+
+int templated_once_test(json &j)
+{
+    return templated_once<int>(j);
+}
+
+template <typename T>
+T templated_multiple(json &j)
+{
+    T t = j;
+    // CHECK-MESSAGES: [[@LINE-1]]:11: warning: implicit nlohmann::json conversion to templated type should be explicit [modernize-nlohmann-json-explicit-conversions]
     return t;
 }
 
 double templated_double_test(json &j)
 {
-    return templated<double>(j);
+    return templated_multiple<double>(j);
 }
 
 int templated_int_test(json &j)
 {
-    return templated<int>(j);
+    return templated_multiple<int>(j);
 }
+#endif

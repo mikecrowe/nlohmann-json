@@ -27,7 +27,8 @@ void NlohmannJsonExplicitConversionsCheck::registerMatchers(
       cxxMemberCallExpr(
           on(expr().bind("arg")),
           callee(cxxConversionDecl(ofClass(hasName("nlohmann::basic_json")))
-                     .bind("conversionDecl")))
+                     .bind("conversionDecl")),
+          optionally(expr(isInTemplateInstantiation()).bind("instantiation")))
           .bind("conversionCall");
   Finder->addMatcher(Matcher, this);
 }
@@ -48,6 +49,20 @@ void NlohmannJsonExplicitConversionsCheck::check(
   const SourceRange ExprRange = Call->getSourceRange();
   if (!ExprRange.isValid())
     return;
+
+  if (Result.Nodes.getNodeAs<Expr>("instantiation")) {
+    // If we're parsing a template definition then we might be able to
+    // fix the conversion if it wasn't dependent on a template
+    // parameter. If we did that, then we'll have stored it in
+    // AlreadyFixed. If we didn't do that then the conversion must
+    // have been dependent on a template parameter and we can't fix it
+    // automatically. The template definition must be seen before any
+    // instantiation.
+    if (!AlreadyFixed.contains(Call->getExprLoc()))
+      diag(Call->getExprLoc(),
+           "implicit nlohmann::json conversion to templated type should be explicit");
+    return;
+  }
 
   bool Deref = false;
   if (const auto *Op = llvm::dyn_cast<UnaryOperator>(Arg);
@@ -73,6 +88,8 @@ void NlohmannJsonExplicitConversionsCheck::check(
       << DestinationTypeStr
       << FixItHint::CreateReplacement(CharSourceRange::getTokenRange(ExprRange),
                                       ReplacementText);
+
+  AlreadyFixed.insert(Call->getExprLoc());
 }
 
 } // namespace clang::tidy::modernize
