@@ -101,6 +101,10 @@ This could cause serious bugs. If you use such types in code you apply the check
 
 Other more-benign uses of `typedef` types may also cause the resultant code to look uglier. The check automatically turns `std::basic_string<char>` back into `std::string` since that is so common.
 
+#### Overlapping fixes are not applied
+
+If the implicit conversion is to a templated type that can change then the check will try to replace it with an explicit conversion for each instantiation it sees. If it sees multiple ones in the same translation unit then no fixes will be applied as they would overlap. If they are spread across translation units then there is a risk that the first fix will make the type concrete breaking the code. This could be unnoticed if
+
 #### Redundant casts
 
 Code using the library may use casts to force the correct type. Such code will be fixed but the unnecessary cast will remain, which could cause confusion and be brittle when the code is changed. For example, converting:
