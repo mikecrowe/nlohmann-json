@@ -349,6 +349,7 @@ T templated(json &j)
     // CHECK-MESSAGES: [[@LINE-1]]:11: warning: implicit nlohmann::json conversion to double should be explicit [modernize-nlohmann-json-explicit-conversions]
     // CHECK-MESSAGES: [[@LINE-2]]:11: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
     // No fixes because these two are overlapping
+    return t;
 }
 
 double templated_double_test(json &j)
