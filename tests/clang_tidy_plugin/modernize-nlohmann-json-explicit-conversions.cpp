@@ -243,6 +243,11 @@ class basic_json
         return get<std::vector<std::string>>();
     }
 
+    iterator find(const char *) const;
+
+    basic_json &at(const char *) const;
+    basic_json &operator[](const char *) const;
+
     bool is_array() const;
 };
 
@@ -351,6 +356,27 @@ int get_int_iterator_cast(json::iterator i)
     return static_cast<int>(*i);
     // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
     // CHECK-FIXES: return i->get<int>();
+}
+
+int get_int_at(json j)
+{
+    return j.at("value");
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return j.at("value").get<int>();
+}
+
+int get_int_property(json j)
+{
+    return j["value"];
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return j["value"].get<int>();
+}
+
+int get_int_find(json j)
+{
+    return *j.find("value");
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return j.find("value")->get<int>();
 }
 
 // A cast to a different type that is constructed from the result of the
