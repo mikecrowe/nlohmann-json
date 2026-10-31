@@ -595,8 +595,7 @@ int conversion_inside_macro_not_fixed(json &j)
     // CHECK-FIXES: return CONVERSION_INSIDE_MACRO(j);
 }
 
-// An implicit conversion inside a macro definition is diagnosed, but not fixed
-// either.
+// An implicit conversion inside a macro definition is diagnosed, but not fixed.
 #if !defined(USE_REAL_HEADER)
 #define IMPLICIT_CONVERSION_INSIDE_MACRO(j) const int value = j["value"]
 
@@ -627,8 +626,6 @@ void take_int(int);
 
 #define CALL_TAKE_INT(x) take_int(x)
 
-// The conversion is required by code in the macro definition, but the
-// converted expression is a macro argument so it can be fixed there.
 void conversion_of_macro_argument(json &j)
 {
     CALL_TAKE_INT(j);
@@ -638,8 +635,6 @@ void conversion_of_macro_argument(json &j)
 
 #define GLOBAL_JSON global_json
 
-// The macro expands to just the converted expression so the conversion is
-// outside the macro.
 int conversion_of_object_like_macro()
 {
     int i = GLOBAL_JSON;
@@ -709,6 +704,55 @@ double templated_conversion_inside_macro_test(json &j)
            templated_dependent_conversion_inside_macro_not_fixed<int>(j) +
            templated_dependent_conversion_inside_macro_not_fixed<double>(j);
 }
+
+#if !defined(USE_REAL_HEADER)
+#define IMPLICIT_RETURN_INSIDE_MACRO(x) return x["value"]
+
+int implicit_return_inside_macro_not_fixed(json &j)
+{
+    IMPLICIT_RETURN_INSIDE_MACRO(j);
+    // CHECK-MESSAGES: [[@LINE-1]]:34: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: {{^}}    IMPLICIT_RETURN_INSIDE_MACRO(j);{{$}}
+}
+
+int add_one(int);
+
+#define IMPLICIT_ADD_ONE_PLUS_ONE_INSIDE_MACRO(x) add_one(x["value"]) + 1
+
+int implicit_conversion_inside_larger_macro_not_fixed(json &j)
+{
+    return IMPLICIT_ADD_ONE_PLUS_ONE_INSIDE_MACRO(j);
+    // CHECK-MESSAGES: [[@LINE-1]]:51: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return IMPLICIT_ADD_ONE_PLUS_ONE_INSIDE_MACRO(j);
+}
+
+template <typename T>
+int templated_implicit_conversion_inside_macro_not_fixed(json &j)
+{
+    IMPLICIT_RETURN_INSIDE_MACRO(j);
+    // CHECK-MESSAGES: [[@LINE-1]]:34: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: {{^}}    IMPLICIT_RETURN_INSIDE_MACRO(j);{{$}}
+}
+
+#define IMPLICIT_DECLARE_T_INSIDE_MACRO(x) T t = x["value"]
+
+template <typename T>
+T templated_dependent_implicit_conversion_inside_macro_not_fixed(json &j)
+{
+    IMPLICIT_DECLARE_T_INSIDE_MACRO(j);
+    // CHECK-MESSAGES: [[@LINE-1]]:37: warning: implicit nlohmann::json conversion to templated type should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: {{^}}    IMPLICIT_DECLARE_T_INSIDE_MACRO(j);{{$}}
+    return t;
+}
+
+double templated_implicit_conversion_inside_macro_test(json &j)
+{
+    return templated_implicit_conversion_inside_macro_not_fixed<int>(j) +
+           templated_implicit_conversion_inside_macro_not_fixed<double>(j) +
+           templated_dependent_implicit_conversion_inside_macro_not_fixed<int>(j) +
+           templated_dependent_implicit_conversion_inside_macro_not_fixed<double>(j);
+}
+#endif
 
 #if defined(USE_REAL_HEADER) && (!defined(JSON_USE_IMPLICIT_CONVERSIONS) || JSON_USE_IMPLICIT_CONVERSIONS != 0)
 // This is not fixed because the conversion happens inside a system header.
