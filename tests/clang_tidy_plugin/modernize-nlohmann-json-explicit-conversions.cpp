@@ -367,6 +367,39 @@ FromInt get_from_int_functional_cast(json& j)
     // CHECK-FIXES: return FromInt(j.get<int>());
 }
 
+FromInt get_from_int_c_cast(json& j)
+{
+    return (FromInt)j;
+    // CHECK-MESSAGES: [[@LINE-1]]:21: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return (FromInt)j.get<int>();
+}
+
+FromInt get_from_int_constructor_cast(json& j)
+{
+    return FromInt{j};
+    // CHECK-MESSAGES: [[@LINE-1]]:20: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return FromInt{j.get<int>()};
+}
+
+struct OneInt
+{
+    int i;
+};
+
+OneInt get_one_int_aggregate(json& j)
+{
+    return OneInt{j};
+    // CHECK-MESSAGES: [[@LINE-1]]:19: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return OneInt{j.get<int>()};
+}
+
+OneInt get_one_int_aggregate_compound_literal(json& j)
+{
+    return (OneInt){j};
+    // CHECK-MESSAGES: [[@LINE-1]]:21: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return (OneInt){j.get<int>()};
+}
+
 std::string get_string(json& j)
 {
     return j;
