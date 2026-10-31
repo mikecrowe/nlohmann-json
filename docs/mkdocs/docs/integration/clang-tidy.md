@@ -101,17 +101,25 @@ This could cause serious bugs. If you use such types in code you apply the check
 
 Other more-benign uses of `typedef` types may also cause the resultant code to look uglier. The check automatically turns `std::basic_string<char>` back into `std::string` since that is so common.
 
-#### Overlapping fixes are not applied
+#### Fixes in template definitions and instantiations
 
-If the implicit conversion is to a templated type that can change then the check will try to replace it with an explicit conversion for each instantiation it sees. If it sees multiple ones in the same translation unit then no fixes will be applied as they would overlap. If they are spread across translation units then there is a risk that the first fix will make the type concrete breaking the code. This could be unnoticed if
+If the implicit conversion is not dependent on a template parameter then it will be fixed in the definition since the type is known.
+
+If the implicit conversion is dependent on a template parameter then the type is not known so it will not be fixed. A warning will be emitted to allow the code to be fixed by hand.
 
 #### Redundant casts
 
-Code using the library may use casts to force the correct type. Such code will be fixed but the unnecessary cast will remain, which could cause confusion and be brittle when the code is changed. For example, converting:
+Code using the library may use casts to force the correct type. These casts will be removed. For example, converting:
 ```c++
-const auto value = static_cast<int>(j["value"])
+const auto value1 = static_cast<int>(j1["value"]);
+const auto value2 = (double)*pj;
+const auto value3 = std::string{*pj3};
+const auto value4 = std::string(j4["value"]);
 ```
 will yield:
 ```
-const auto value = static_cast<int>(j["value"].get<int>())
+const auto value1 = j1["value"].get<int>();
+const auto value2 = pj->get<double>();
+const auto value3 = pj2->get<std::string>();
+const auto value4 = j4["value"]->get<std::string>();
 ```
