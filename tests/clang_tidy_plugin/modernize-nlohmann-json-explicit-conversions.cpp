@@ -421,6 +421,13 @@ std::vector<std::string> get_string_vector(json& j)
     // CHECK-FIXES: return j.get<std::vector<std::string>>();
 }
 
+std::vector<std::string> get_string_vector_cast(json* j)
+{
+    return static_cast<std::vector<std::string>>(*j);
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to std::vector<std::string> should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return j->get<std::vector<std::string>>();
+}
+
 MyStruct get_struct(json& j)
 {
     return j;
@@ -506,8 +513,8 @@ int templated_not_dependent_test(json &j)
 
 // Conversions in templates that depend on the template parameters are
 // diagnosed for each instantiation but not fixed since a fix for one
-// instantiation would break the others. This code can't be compiled once
-// implicit conversions are disabled.
+// instantiation would break the others. The unfixed code can't be
+// compiled once implicit conversions are disabled.
 #if !defined(JSON_USE_IMPLICIT_CONVERSIONS) || JSON_USE_IMPLICIT_CONVERSIONS != 0
 template <typename T>
 T templated_once(json &j)

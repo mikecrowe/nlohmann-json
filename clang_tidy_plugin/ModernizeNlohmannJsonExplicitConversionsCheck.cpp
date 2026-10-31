@@ -69,6 +69,7 @@ void NlohmannJsonExplicitConversionsCheck::check(
   const SourceRange ReplaceRange = Cast ? Cast->getSourceRange() : ExprRange;
   if (!ReplaceRange.isValid())
     return;
+
   const SourceLocation DiagLoc =
       Cast ? Cast->getBeginLoc() : Call->getExprLoc();
 
@@ -81,6 +82,7 @@ void NlohmannJsonExplicitConversionsCheck::check(
   // already applied then we don't want to warn. If it wasn't then we
   // don't know the type that should be used so just warn so that the
   // location can be fixed by hand.
+  //
   if (Result.Nodes.getNodeAs<Expr>("instantiation")) {
     if (!AlreadyFixed.contains(DiagLoc))
       diag(DiagLoc,
