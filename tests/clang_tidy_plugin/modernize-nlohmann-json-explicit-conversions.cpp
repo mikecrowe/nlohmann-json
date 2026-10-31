@@ -15,6 +15,7 @@ struct MyStruct
 
 #if defined(USE_REAL_HEADER)
 #include <nlohmann/json.hpp>
+#include <optional>
 
 using nlohmann::json;
 
@@ -571,5 +572,17 @@ double templated_double_test(json &j)
 int templated_int_test(json &j)
 {
     return templated_multiple<int>(j);
+}
+#endif
+
+#if defined(USE_REAL_HEADER) && (!defined(JSON_USE_IMPLICIT_CONVERSIONS) || JSON_USE_IMPLICIT_CONVERSIONS != 0)
+// This is not fixed because the conversion happens inside a system header.
+std::optional<int> optional_test(const nlohmann::json &j)
+{
+  const auto &it = j.find("value");
+  if (it != j.end())
+      return *it;
+  else
+      return std::nullopt;
 }
 #endif
