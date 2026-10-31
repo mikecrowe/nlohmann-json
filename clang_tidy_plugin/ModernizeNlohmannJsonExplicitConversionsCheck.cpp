@@ -23,10 +23,6 @@ namespace clang::tidy::modernize {
 
 void NlohmannJsonExplicitConversionsCheck::registerMatchers(
     MatchFinder *Finder) {
-  // An explicit cast performing the conversion appears as the parent of an
-  // implicit user-defined conversion cast, with a CXXBindTemporaryExpr in
-  // between for class types. A functional cast using braces, such as
-  // std::string{j}, also has a single-element InitListExpr in between.
   auto ExplicitCast = explicitCastExpr().bind("cast");
   auto ParentCast = anyOf(
       hasParent(ExplicitCast),
