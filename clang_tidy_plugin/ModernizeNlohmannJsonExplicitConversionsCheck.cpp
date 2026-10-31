@@ -50,14 +50,16 @@ void NlohmannJsonExplicitConversionsCheck::check(
   if (!ExprRange.isValid())
     return;
 
+  // If we're parsing a template definition then we might be able to
+  // fix the conversion if it wasn't dependent on a template
+  // parameter. If we did that, then we'll have stored it in
+  // AlreadyFixed.
+  //
+  // We'll match again later during each instantiation. If the fix was
+  // already applied then we don't want to warn. If it wasn't then we
+  // don't know the type that should be used so just warn so that the
+  // location can be fixed by hand.
   if (Result.Nodes.getNodeAs<Expr>("instantiation")) {
-    // If we're parsing a template definition then we might be able to
-    // fix the conversion if it wasn't dependent on a template
-    // parameter. If we did that, then we'll have stored it in
-    // AlreadyFixed. If we didn't do that then the conversion must
-    // have been dependent on a template parameter and we can't fix it
-    // automatically. The template definition must be seen before any
-    // instantiation.
     if (!AlreadyFixed.contains(Call->getExprLoc()))
       diag(Call->getExprLoc(),
            "implicit nlohmann::json conversion to templated type should be explicit");
