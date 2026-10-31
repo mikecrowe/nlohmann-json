@@ -575,6 +575,141 @@ int templated_int_test(json &j)
 }
 #endif
 
+#define CONVERSION_OUTSIDE_MACRO(j) j["value"]
+
+int conversion_outside_macro(json &j)
+{
+    return CONVERSION_OUTSIDE_MACRO(j);
+    // CHECK-MESSAGES: [[@LINE-1]]:37: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return CONVERSION_OUTSIDE_MACRO(j).get<int>();
+}
+
+#define CONVERSION_INSIDE_MACRO(j) static_cast<int>(j)
+
+// The conversion is diagnosed, but not fixed since that would require changing
+// the macro definition.
+int conversion_inside_macro_not_fixed(json &j)
+{
+    return CONVERSION_INSIDE_MACRO(j);
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return CONVERSION_INSIDE_MACRO(j);
+}
+
+// An implicit conversion inside a macro definition is diagnosed, but not fixed
+// either.
+#if !defined(USE_REAL_HEADER)
+#define IMPLICIT_CONVERSION_INSIDE_MACRO(j) const int value = j["value"]
+
+int implicit_conversion_inside_macro_not_fixed(json &j)
+{
+    IMPLICIT_CONVERSION_INSIDE_MACRO(j);
+    // CHECK-MESSAGES: [[@LINE-1]]:38: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: IMPLICIT_CONVERSION_INSIDE_MACRO(j);
+    return value;
+}
+#endif
+
+json global_json;
+
+#if !defined(USE_REAL_HEADER)
+#define DECLARE_FROM_GLOBAL_JSON int d = global_json;
+
+int implicit_conversion_of_global_inside_macro_not_fixed()
+{
+    DECLARE_FROM_GLOBAL_JSON
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: {{^}}    DECLARE_FROM_GLOBAL_JSON{{$}}
+    return d;
+}
+#endif
+
+void take_int(int);
+
+#define CALL_TAKE_INT(x) take_int(x)
+
+// The conversion is required by code in the macro definition, but the
+// converted expression is a macro argument so it can be fixed there.
+void conversion_of_macro_argument(json &j)
+{
+    CALL_TAKE_INT(j);
+    // CHECK-MESSAGES: [[@LINE-1]]:19: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: CALL_TAKE_INT(j.get<int>());
+}
+
+#define GLOBAL_JSON global_json
+
+// The macro expands to just the converted expression so the conversion is
+// outside the macro.
+int conversion_of_object_like_macro()
+{
+    int i = GLOBAL_JSON;
+    // CHECK-MESSAGES: [[@LINE-1]]:13: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: int i = GLOBAL_JSON.get<int>();
+    return i;
+}
+
+int cast_of_object_like_macro()
+{
+    return static_cast<int>(GLOBAL_JSON);
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return GLOBAL_JSON.get<int>();
+}
+
+#define C_CAST_INSIDE_MACRO(x) (int)(x)
+
+int c_cast_inside_macro_not_fixed(json &j)
+{
+    return C_CAST_INSIDE_MACRO(j);
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return C_CAST_INSIDE_MACRO(j);
+}
+
+#define CAST_OF_GLOBAL_INSIDE_MACRO static_cast<int>(global_json)
+
+int cast_of_global_inside_macro_not_fixed()
+{
+    return CAST_OF_GLOBAL_INSIDE_MACRO;
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return CAST_OF_GLOBAL_INSIDE_MACRO;
+}
+
+#define CAST_PLUS_ONE_INSIDE_MACRO(x) static_cast<int>(x) + 1
+
+int cast_inside_larger_macro_not_fixed(json &j)
+{
+    return CAST_PLUS_ONE_INSIDE_MACRO(j);
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return CAST_PLUS_ONE_INSIDE_MACRO(j);
+}
+
+// A conversion inside a macro used in a template is only diagnosed once,
+// rather than again for each instantiation.
+template <typename T>
+int templated_conversion_inside_macro_not_fixed(json &j)
+{
+    return CONVERSION_INSIDE_MACRO(j);
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return CONVERSION_INSIDE_MACRO(j);
+}
+
+#define CAST_TO_T_INSIDE_MACRO(x) static_cast<T>(x)
+
+template <typename T>
+T templated_dependent_conversion_inside_macro_not_fixed(json &j)
+{
+    return CAST_TO_T_INSIDE_MACRO(j);
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to templated type should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return CAST_TO_T_INSIDE_MACRO(j);
+}
+
+double templated_conversion_inside_macro_test(json &j)
+{
+    return templated_conversion_inside_macro_not_fixed<int>(j) +
+           templated_conversion_inside_macro_not_fixed<double>(j) +
+           templated_dependent_conversion_inside_macro_not_fixed<int>(j) +
+           templated_dependent_conversion_inside_macro_not_fixed<double>(j);
+}
+
 #if defined(USE_REAL_HEADER) && (!defined(JSON_USE_IMPLICIT_CONVERSIONS) || JSON_USE_IMPLICIT_CONVERSIONS != 0)
 // This is not fixed because the conversion happens inside a system header.
 std::optional<int> optional_test(const nlohmann::json &j)

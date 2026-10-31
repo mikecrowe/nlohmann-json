@@ -62,16 +62,17 @@ void NlohmannJsonExplicitConversionsCheck::check(
       DestinationType.getAsString(Result.Context->getPrintingPolicy());
   replaceAll(DestinationTypeStr, "std::basic_string<char>", "std::string");
 
-  const SourceRange ExprRange = Call->getSourceRange();
-  if (!ExprRange.isValid())
-    return;
-
-  const SourceRange ReplaceRange = Cast ? Cast->getSourceRange() : ExprRange;
-  if (!ReplaceRange.isValid())
-    return;
-
   const SourceLocation DiagLoc =
       Cast ? Cast->getBeginLoc() : Call->getExprLoc();
+  if (DiagLoc.isInvalid())
+    return;
+
+  // Warn even if the conversion is inside a macro expansion, but we
+  // can't fix it in that case.
+  const SourceManager &SM = *Result.SourceManager;
+  const LangOptions &LangOpts = Result.Context->getLangOpts();
+  const SourceRange ExprRange = Call->getSourceRange();
+  const SourceRange ReplaceRange = Cast ? Cast->getSourceRange() : ExprRange;
 
   // If we're parsing a template definition then we might be able to
   // fix the conversion if it wasn't dependent on a template
@@ -90,6 +91,27 @@ void NlohmannJsonExplicitConversionsCheck::check(
     return;
   }
 
+  bool CanFix = ExprRange.isValid() && ReplaceRange.isValid() &&
+                !(Cast && SM.isMacroBodyExpansion(Cast->getBeginLoc()));
+
+  CharSourceRange FileExprRange;
+  CharSourceRange FileReplaceRange;
+
+  if (CanFix) {
+    FileExprRange = Lexer::makeFileCharRange(
+        CharSourceRange::getTokenRange(ExprRange), SM, LangOpts);
+    FileReplaceRange = Lexer::makeFileCharRange(
+        CharSourceRange::getTokenRange(ReplaceRange), SM, LangOpts);
+    CanFix = FileExprRange.isValid() && FileReplaceRange.isValid();
+  }
+
+  if (!CanFix) {
+    diag(DiagLoc, "implicit nlohmann::json conversion to %0 should be explicit")
+        << DestinationTypeStr;
+    AlreadyFixed.insert(DiagLoc);
+    return;
+  }
+
   bool Deref = false;
   if (const auto *Op = llvm::dyn_cast<UnaryOperator>(Arg);
       Op && Op->getOpcode() == UO_Deref)
@@ -98,9 +120,8 @@ void NlohmannJsonExplicitConversionsCheck::check(
            Op && Op->getOperator() == OO_Star)
     Deref = true;
 
-  llvm::StringRef SourceText = clang::Lexer::getSourceText(
-      clang::CharSourceRange::getTokenRange(ExprRange), *Result.SourceManager,
-      Result.Context->getLangOpts());
+  llvm::StringRef SourceText =
+      clang::Lexer::getSourceText(FileExprRange, SM, LangOpts);
 
   if (Deref)
     SourceText.consume_front("*");
@@ -111,8 +132,7 @@ void NlohmannJsonExplicitConversionsCheck::check(
           .str();
   diag(DiagLoc, "implicit nlohmann::json conversion to %0 should be explicit")
       << DestinationTypeStr
-      << FixItHint::CreateReplacement(
-             CharSourceRange::getTokenRange(ReplaceRange), ReplacementText);
+      << FixItHint::CreateReplacement(FileReplaceRange, ReplacementText);
 
   AlreadyFixed.insert(DiagLoc);
 }
