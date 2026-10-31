@@ -25,8 +25,13 @@ void NlohmannJsonExplicitConversionsCheck::registerMatchers(
     MatchFinder *Finder) {
   // An explicit cast performing the conversion appears as the parent of an
   // implicit user-defined conversion cast, with a CXXBindTemporaryExpr in
-  // between for class types.
+  // between for class types. A functional cast using braces, such as
+  // std::string{j}, also has a single-element InitListExpr in between.
   auto ExplicitCast = explicitCastExpr().bind("cast");
+  auto ParentCast = anyOf(
+      hasParent(ExplicitCast),
+      hasParent(initListExpr(unless(hasInit(1, expr())),
+                             hasParent(ExplicitCast))));
   auto Matcher =
       cxxMemberCallExpr(
           on(expr().bind("arg")),
@@ -35,8 +40,8 @@ void NlohmannJsonExplicitConversionsCheck::registerMatchers(
           optionally(expr(isInTemplateInstantiation()).bind("instantiation")),
           optionally(hasParent(implicitCastExpr(
               hasCastKind(CK_UserDefinedConversion),
-              anyOf(hasParent(ExplicitCast),
-                    hasParent(cxxBindTemporaryExpr(hasParent(ExplicitCast))))))))
+              anyOf(ParentCast,
+                    hasParent(cxxBindTemporaryExpr(ParentCast)))))))
           .bind("conversionCall");
   Finder->addMatcher(Matcher, this);
 }

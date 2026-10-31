@@ -281,6 +281,13 @@ int get_int_functional_cast(json& j)
     // CHECK-FIXES: return j.get<int>();
 }
 
+int get_int_constructor_cast(json& j)
+{
+    return int{j};
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return j.get<int>();
+}
+
 int get_int_const_cast_type(json& j)
 {
     return static_cast<const int>(j);
