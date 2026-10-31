@@ -27,7 +27,7 @@ public:
   }
 
 private:
-    llvm::DenseSet<SourceLocation> AlreadyFixed;
+    llvm::DenseSet<SourceLocation> AlreadySeen;
 };
 
 } // namespace clang::tidy::modernize

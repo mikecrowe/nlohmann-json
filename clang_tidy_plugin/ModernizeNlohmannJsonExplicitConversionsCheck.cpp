@@ -77,7 +77,7 @@ void NlohmannJsonExplicitConversionsCheck::check(
   // If we're parsing a template definition then we might be able to
   // fix the conversion if it wasn't dependent on a template
   // parameter. If we did that, then we'll have stored it in
-  // AlreadyFixed.
+  // AlreadySeen.
   //
   // We'll match again later during each instantiation. If the fix was
   // already applied then we don't want to warn. If it wasn't then we
@@ -85,7 +85,7 @@ void NlohmannJsonExplicitConversionsCheck::check(
   // location can be fixed by hand.
   //
   if (Result.Nodes.getNodeAs<Expr>("instantiation")) {
-    if (!AlreadyFixed.contains(DiagLoc))
+    if (!AlreadySeen.contains(DiagLoc))
       diag(DiagLoc,
            "implicit nlohmann::json conversion to templated type should be explicit");
     return;
@@ -108,7 +108,7 @@ void NlohmannJsonExplicitConversionsCheck::check(
   if (!CanFix) {
     diag(DiagLoc, "implicit nlohmann::json conversion to %0 should be explicit")
         << DestinationTypeStr;
-    AlreadyFixed.insert(DiagLoc);
+    AlreadySeen.insert(DiagLoc);
     return;
   }
 
@@ -134,7 +134,7 @@ void NlohmannJsonExplicitConversionsCheck::check(
       << DestinationTypeStr
       << FixItHint::CreateReplacement(FileReplaceRange, ReplacementText);
 
-  AlreadyFixed.insert(DiagLoc);
+  AlreadySeen.insert(DiagLoc);
 }
 
 } // namespace clang::tidy::modernize
