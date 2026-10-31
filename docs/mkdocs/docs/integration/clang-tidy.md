@@ -42,27 +42,33 @@ At the moment the plugin contains only a single check.
 This check converts code that takes advantage of [implicit conversions](../api/macros/json_use_implicit_conversions.md) to use explicit `get()` calls using the correct templated type.
 For example, it turns:
 ```c++
-void f(const nlohmann::json &j1, const nlohmann::json &j2)
+void f(const nlohmann::json &j1, const nlohmann::json &j2, const nlohmann::json *pj)
 {
-  int i = j1;
-  double d = j2.at("value");
-  bool b = *j2.find("valid");
-  std::cout << i << " " << d << " " << b << "\n";
+  int i = j1.at("value1");
+  double d = j1["value2"];
+  bool b1 = *j1.find("valid");
+  bool b2 = j2;
+  const auto s = static_cast<std::string>(*pj);
+  const auto m = MyStruct{j2};
+  std::cout << i << " " << d << " " << b1 << " " << b2 << " " << s << " " << m << "\n";
 }
 ```
 into
 ```c++
-void f(const nlohmann::json &j1, const nlohmann::json &j2)
+void f(const nlohmann::json &j1, const nlohmann::json &j2, const nlohmann::json *pj)
 {
-  int i = j1.get<int>();
-  double d = j2.at("value").get<double>();
-  bool b = j2.find("valid")->get<bool>();
-  std::cout << i << " " << d << " " << b << "\n";
+  int i = j1.at("value1").get<int>();
+  double d = j1["value2").get<double>();
+  bool b1 = j1.find("valid")->get<bool>();
+  bool b2 = j.find("valid")->get<bool>();
+  const auto s = pj->get<std::string>();
+  const auto m = j2.get<MyStruct>();
+  std::cout << i << " " << d << " " << b1 << " " << b2 << " " << s << " " << m << "\n";
 }
 ```
 by knowing what the target type is for the implicit conversion and turning
 that into an explicit call to the `get()` method with that type as the
-template parameter.
+template parameter and removing any now-unnecessary cast.
 
 Unfortunately the check does not work very well if the implicit conversion
 occurs in templated code or in a system header. For example, the following
