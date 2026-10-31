@@ -260,6 +260,106 @@ int get_int(json& j)
     // CHECK-FIXES: return j.get<int>();
 }
 
+int get_int_cpp_cast(json& j)
+{
+    return static_cast<int>(j);
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return j.get<int>();
+}
+
+int get_int_c_cast(json& j)
+{
+    return (int)j;
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return j.get<int>();
+}
+
+int get_int_functional_cast(json& j)
+{
+    return int(j);
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return j.get<int>();
+}
+
+int get_int_const_cast_type(json& j)
+{
+    return static_cast<const int>(j);
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return j.get<int>();
+}
+
+typedef int MyInt;
+
+MyInt get_int_typedef_cast(json& j)
+{
+    return (MyInt)j;
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return j.get<int>();
+}
+
+std::string get_string_cpp_cast(json& j)
+{
+    return static_cast<std::string>(j);
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to std::string should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return j.get<std::string>();
+}
+
+std::string get_string_c_cast(json& j)
+{
+    return (std::string)j;
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to std::string should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return j.get<std::string>();
+}
+
+std::string get_string_functional_cast(json& j)
+{
+    return std::string(j);
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to std::string should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return j.get<std::string>();
+}
+
+std::string get_string_constructor_cast(json& j)
+{
+    return std::string{j};
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to std::string should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return j.get<std::string>();
+}
+
+int get_int_ptr_cast(json* j)
+{
+    return (int)*j;
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return j->get<int>();
+}
+
+int get_int_iterator_cast(json::iterator i)
+{
+    return static_cast<int>(*i);
+    // CHECK-MESSAGES: [[@LINE-1]]:12: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return i->get<int>();
+}
+
+// A cast to a different type that is constructed from the result of the
+// conversion is still required, so only the conversion is fixed.
+struct FromInt
+{
+    explicit FromInt(int) {}
+};
+
+FromInt get_from_int_cpp_cast(json& j)
+{
+    return static_cast<FromInt>(j);
+    // CHECK-MESSAGES: [[@LINE-1]]:33: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return static_cast<FromInt>(j.get<int>());
+}
+
+FromInt get_from_int_functional_cast(json& j)
+{
+    return FromInt(j);
+    // CHECK-MESSAGES: [[@LINE-1]]:20: warning: implicit nlohmann::json conversion to int should be explicit [modernize-nlohmann-json-explicit-conversions]
+    // CHECK-FIXES: return FromInt(j.get<int>());
+}
+
 std::string get_string(json& j)
 {
     return j;

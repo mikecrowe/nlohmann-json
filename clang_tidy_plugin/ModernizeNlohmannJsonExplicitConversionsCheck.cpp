@@ -23,12 +23,20 @@ namespace clang::tidy::modernize {
 
 void NlohmannJsonExplicitConversionsCheck::registerMatchers(
     MatchFinder *Finder) {
+  // An explicit cast performing the conversion appears as the parent of an
+  // implicit user-defined conversion cast, with a CXXBindTemporaryExpr in
+  // between for class types.
+  auto ExplicitCast = explicitCastExpr().bind("cast");
   auto Matcher =
       cxxMemberCallExpr(
           on(expr().bind("arg")),
           callee(cxxConversionDecl(ofClass(hasName("nlohmann::basic_json")))
                      .bind("conversionDecl")),
-          optionally(expr(isInTemplateInstantiation()).bind("instantiation")))
+          optionally(expr(isInTemplateInstantiation()).bind("instantiation")),
+          optionally(hasParent(implicitCastExpr(
+              hasCastKind(CK_UserDefinedConversion),
+              anyOf(hasParent(ExplicitCast),
+                    hasParent(cxxBindTemporaryExpr(hasParent(ExplicitCast))))))))
           .bind("conversionCall");
   Finder->addMatcher(Matcher, this);
 }
@@ -40,8 +48,17 @@ void NlohmannJsonExplicitConversionsCheck::check(
   const auto *Call =
       Result.Nodes.getNodeAs<CXXMemberCallExpr>("conversionCall");
   const auto *Arg = Result.Nodes.getNodeAs<Expr>("arg");
+  const auto *Cast = Result.Nodes.getNodeAs<ExplicitCastExpr>("cast");
 
   const QualType DestinationType = Decl->getConversionType();
+
+  // An explicit cast to the conversion type is redundant once get<>() is
+  // called. A cast to a different type, for example (double)j when only an
+  // int conversion exists, still has an effect, so it must be kept.
+  if (Cast && !Result.Context->hasSameUnqualifiedType(Cast->getType(),
+                                                      DestinationType))
+    Cast = nullptr;
+
   std::string DestinationTypeStr =
       DestinationType.getAsString(Result.Context->getPrintingPolicy());
   replaceAll(DestinationTypeStr, "std::basic_string<char>", "std::string");
@@ -49,6 +66,12 @@ void NlohmannJsonExplicitConversionsCheck::check(
   const SourceRange ExprRange = Call->getSourceRange();
   if (!ExprRange.isValid())
     return;
+
+  const SourceRange ReplaceRange = Cast ? Cast->getSourceRange() : ExprRange;
+  if (!ReplaceRange.isValid())
+    return;
+  const SourceLocation DiagLoc =
+      Cast ? Cast->getBeginLoc() : Call->getExprLoc();
 
   // If we're parsing a template definition then we might be able to
   // fix the conversion if it wasn't dependent on a template
@@ -60,8 +83,8 @@ void NlohmannJsonExplicitConversionsCheck::check(
   // don't know the type that should be used so just warn so that the
   // location can be fixed by hand.
   if (Result.Nodes.getNodeAs<Expr>("instantiation")) {
-    if (!AlreadyFixed.contains(Call->getExprLoc()))
-      diag(Call->getExprLoc(),
+    if (!AlreadyFixed.contains(DiagLoc))
+      diag(DiagLoc,
            "implicit nlohmann::json conversion to templated type should be explicit");
     return;
   }
@@ -85,13 +108,12 @@ void NlohmannJsonExplicitConversionsCheck::check(
       (llvm::Twine(SourceText) + (Deref ? "->" : ".") + "get<" +
        DestinationTypeStr + ">()")
           .str();
-  diag(Call->getExprLoc(),
-       "implicit nlohmann::json conversion to %0 should be explicit")
+  diag(DiagLoc, "implicit nlohmann::json conversion to %0 should be explicit")
       << DestinationTypeStr
-      << FixItHint::CreateReplacement(CharSourceRange::getTokenRange(ExprRange),
-                                      ReplacementText);
+      << FixItHint::CreateReplacement(
+             CharSourceRange::getTokenRange(ReplaceRange), ReplacementText);
 
-  AlreadyFixed.insert(Call->getExprLoc());
+  AlreadyFixed.insert(DiagLoc);
 }
 
 } // namespace clang::tidy::modernize
