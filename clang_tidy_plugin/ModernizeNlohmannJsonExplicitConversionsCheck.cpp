@@ -53,9 +53,7 @@ void NlohmannJsonExplicitConversionsCheck::check(
 
   const QualType DestinationType = Decl->getConversionType();
 
-  // An explicit cast to the conversion type is redundant once get<>() is
-  // called. A cast to a different type, for example (double)j when only an
-  // int conversion exists, still has an effect, so it must be kept.
+  // Ensure that OneInt{j} keeps the cast.
   if (Cast && !Result.Context->hasSameUnqualifiedType(Cast->getType(),
                                                       DestinationType))
     Cast = nullptr;
