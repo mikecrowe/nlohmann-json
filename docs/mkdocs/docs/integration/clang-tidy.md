@@ -3,6 +3,8 @@
 The library comes with a [clang-tidy](https://clang.llvm.org/extra/clang-tidy/) plugin.
 It is disabled by default but can be enabled by enabling the `JSON_ClangTidyPlugin` [CMake option](cmake.md#json_clangtidyplugin).
 Clang-tidy [Plugins](https://clang.llvm.org/extra/clang-tidy/ExternalClang-TidyExamples.html) are only supported by Clang 16 and later.
+It is currently tested with Clang versions 16 to 22.
+The plugin is not covered by the nlohmann-json's ABI stability guarantees and its behaviour may change.
 
 ## Building the plugin
 
