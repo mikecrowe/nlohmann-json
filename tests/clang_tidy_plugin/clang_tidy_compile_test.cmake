@@ -24,7 +24,7 @@ compile_test(-DJSON_USE_IMPLICIT_CONVERSIONS=1)
 # Run clang-tidy
 message(STATUS "Running clang-tidy to fix implicit conversions in ${TEST_FILE}")
 execute_process(
-    COMMAND ${CLANG_TIDY_PROGRAM} -load "${PLUGIN_PATH}" "-checks=-*,modernize-nlohmann-json-explicit-conversions" "-config={}" --fix "${TEST_FILE}" -- ${CXX_STANDARD_FLAG}
+    COMMAND ${CLANG_TIDY_TOOL} -load "${PLUGIN_PATH}" "-checks=-*,modernize-nlohmann-json-explicit-conversions" "-config={}" --fix "${TEST_FILE}" -- ${CXX_STANDARD_FLAG}
     RESULT_VARIABLE CLANG_TIDY_RESULT
     OUTPUT_VARIABLE CLANG_TIDY_OUTPUT
     ERROR_VARIABLE CLANG_TIDY_ERROR
