@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 #include "clang-tidy/ClangTidyModule.h"
+#include "llvm/Config/llvm-config.h"
+#if LLVM_VERSION_MAJOR < 22
+// LLVM 22 moved ClangTidyModuleRegistry into ClangTidyModule.h and deprecated this header
 #include "clang-tidy/ClangTidyModuleRegistry.h"
+#endif
 #include "ModernizeNlohmannJsonExplicitConversionsCheck.h"
 
 namespace {
